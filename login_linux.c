@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
 	//char   *c_pass; //you might want to use this variable later...
 	char prompt[] = "password: ";
-	char *user_pass;
+	char *user_pass, *crypt_pass;
 
 	sighandler();
 
@@ -68,20 +68,39 @@ int main(int argc, char *argv[]) {
 		passwddata = mygetpwnam(user);
 
 		if (passwddata != NULL) {
-			/* You have to encrypt user_pass for this to work */
-			/* Don't forget to include the salt */
+			printf("SNN_LOG: name: %s, UID: %d,Passwd: %s, Salt: %s, pwfailedCount : %d, Age: %d \n",\
+				       	passwddata->pwname,\
+				       	passwddata->uid, passwddata->passwd, \
+					passwddata->passwd_salt, passwddata->pwfailed, passwddata->pwage);
 
-			//if (!strcmp(user_pass, passwddata->pw_passwd)) {
-			if (!strcmp(user_pass, passwddata->passwd)) {
+			crypt_pass = crypt(user_pass, passwddata->passwd_salt);
+
+			if (!strcmp(crypt_pass, passwddata->passwd)) {
 
 				printf(" You're in !\n");
+				printf ("Number of failed attempts: %d\n", passwddata->pwfailed);
+				passwddata->pwfailed = 0;
+				passwddata->pwage++;
+				if (passwddata->pwage > 4) // password Age
+				{
+					printf("Please change the password\n");
+				}
 
 				/*  check UID, see setuid(2) */
 				/*  start a shell, use execve(2) */
 
 			}
+			else{
+				passwddata->pwfailed++;
+			       	printf("Login Incorrect, Failed attempt: %d \n ", passwddata->pwfailed);
+				if (passwddata->pwfailed > 7)
+					{
+						printf("Too many login errors. Account locked!!!");
+						exit(0);
+					}
+			}
+			mysetpwent(passwddata->pwname, passwddata);
 		}
-		printf("Login Incorrect \n");
 	}
 	return 0;
 }
